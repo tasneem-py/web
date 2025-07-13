@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image Color Picker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2em;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 1.2em;
+      padding: 2em;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      color: #ffffff;
+    }
+
+    .container img {
+      width: 100%;
+      border-radius: 0.6em;
+      margin-bottom: 1.2em;
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    label,
+    button {
+      display: inline-block;
+      background: #00cba9;
+      color: white;
+      padding: 0.75em 1.3em;
+      border: none;
+      border-radius: 0.5em;
+      cursor: pointer;
+      margin: 0.5em 0.4em;
+      transition: background 0.3s ease;
+      font-size: 1em;
+      font-weight: 600;
+    }
+
+    label:hover,
+    button:hover {
+      background: #009f87;
+    }
+
+    .result {
+      display: none;
+      margin-top: 1.5em;
+    }
+
+    .color-box {
+      width: 100%;
+      height: 60px;
+      border-radius: 0.5em;
+      margin: 1em 0;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .color-values input {
+      width: 100%;
+      padding: 0.6em;
+      margin: 0.4em 0;
+      font-size: 1em;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 0.4em;
+      background: rgba(255,255,255,0.05);
+      color: #ffffff;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .color-values input:focus {
+      outline: none;
+      border-color: #00cba9;
+    }
+
+    #alert {
+      margin-top: 1em;
+      background: #00cba9;
+      color: #fff;
+      padding: 0.5em 1em;
+      border-radius: 0.4em;
+      transform: scale(0);
+      transition: transform 0.3s ease;
+    }
+
+    #error {
+      margin-top: 1em;
+      color: #ff6b6b;
+      font-size: 0.95em;
+    }
+
+    @media (max-width: 450px) {
+      .container {
+        padding: 1.5em;
+      }
+
+      label, button {
+        width: 100%;
+        margin: 0.5em 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img id="image" src="https://miro.medium.com/v2/resize:fit:1200/1*3l_gNnYqeGpwNUoQEYGM9w.jpeg" alt="Preview Image"/>
+    
+    <input type="file" id="file" accept="image/*" />
+    <label for="file">Choose Image</label>
+    <button id="pick-color">Pick Color</button>
+
+    <div id="error"></div>
+
+    <div class="result" id="result">
+      <div class="color-box" id="picked-color"></div>
+      <div class="color-values">
+        <input type="text" id="hex-val" readonly onclick="copyColor(this)">
+        <input type="text" id="rgb-val" readonly onclick="copyColor(this)">
+      </div>
+    </div>
+
+    <div id="alert">Color Code Copied!</div>
+  </div>
+
+  <script>
+    const pickBtn = document.getElementById("pick-color");
+    const errorDiv = document.getElementById("error");
+    const fileInput = document.getElementById("file");
+    const image = document.getElementById("image");
+    const hexVal = document.getElementById("hex-val");
+    const rgbVal = document.getElementById("rgb-val");
+    const resultBox = document.getElementById("result");
+    const pickedColor = document.getElementById("picked-color");
+    const alertBox = document.getElementById("alert");
+
+    let eyeDropper;
+
+    window.onload = () => {
+      if ("EyeDropper" in window) {
+        eyeDropper = new EyeDropper();
+      } else {
+        pickBtn.style.display = "none";
+        errorDiv.textContent = "Your browser doesn't support the EyeDropper API.";
+      }
+    };
+
+    pickBtn.addEventListener("click", async () => {
+      try {
+        const { sRGBHex } = await eyeDropper.open();
+        const rgb = hexToRgb(sRGBHex);
+
+        hexVal.value = sRGBHex;
+        rgbVal.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+        pickedColor.style.backgroundColor = sRGBHex;
+        resultBox.style.display = "block";
+        errorDiv.textContent = "";
+      } catch (err) {
+        if (!err.toString().includes("AbortError")) {
+          errorDiv.textContent = err;
+        }
+      }
+    });
+
+    fileInput.addEventListener("change", () => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        image.src = reader.result;
+        resultBox.style.display = "none";
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    });
+
+    function copyColor(input) {
+      input.select();
+      document.execCommand("copy");
+      alertBox.style.transform = "scale(1)";
+      setTimeout(() => {
+        alertBox.style.transform = "scale(0)";
+      }, 1500);
+    }
+
+    function hexToRgb(hex) {
+      const bigint = parseInt(hex.slice(1), 16);
+      return {
+        r: (bigint >> 16) & 255,
+        g: (bigint >> 8) & 255,
+        b: bigint & 255
+      };
+    }
+  </script>
+</body>
+</html>
